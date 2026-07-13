@@ -190,7 +190,10 @@ view_mode = st.sidebar.radio("Select Interface", ["🏟️ Fan Portal", "📋 St
 # Main Header
 col_logo, col_header = st.columns([1, 10])
 with col_logo:
-    st.image("stadium_banner.png", width=120) if os.path.exists("stadium_banner.png") else st.write("🏆")
+    if os.path.exists("stadium_banner.png"):
+        st.image("stadium_banner.png", width=120)
+    else:
+        st.write("🏆")
 with col_header:
     st.title("PulseArena 2026 — Smart Venue Operations & Experience")
     st.write("Leveraging Generative AI to optimize stadium logistics, accessibility, and fan operations for the FIFA World Cup 2026.")
@@ -201,7 +204,7 @@ with col_header:
 if view_mode == "🏟️ Fan Portal":
     # Banner
     if os.path.exists("stadium_banner.png"):
-        st.image("stadium_banner.png", use_container_width=True)
+        st.image("stadium_banner.png", width="stretch")
         
     st.markdown("## 🏟️ Fan Assistance & Accessibility Hub")
     
@@ -275,7 +278,7 @@ if view_mode == "🏟️ Fan Portal":
             margin=dict(l=10, r=10, t=10, b=10),
             coloraxis_showscale=False
         )
-        st.plotly_chart(fig_concessions, use_container_width=True)
+        st.plotly_chart(fig_concessions, width="stretch")
 
     # Transit & Eco Tracker Row
     st.markdown("---")
@@ -292,7 +295,7 @@ if view_mode == "🏟️ Fan Portal":
         carbon_savings = ["-1.8 kg CO2", "-1.8 kg CO2", "-1.1 kg CO2", "-2.5 kg CO2"]
         
         transit_df = pd.DataFrame({"Transit Mode": transports, "Status": status, "CO2 Saved / Trip": carbon_savings})
-        st.dataframe(transit_df, hide_index=True, use_container_width=True)
+        st.dataframe(transit_df, hide_index=True, width="stretch")
 
     with eco_col:
         st.markdown("#### ⚡ Log Your Journey & Earn Eco-Points")
@@ -398,7 +401,7 @@ else:
         )
         fig_crowd.update_xaxes(showgrid=False, showticklabels=False)
         fig_crowd.update_yaxes(showgrid=False, showticklabels=False)
-        st.plotly_chart(fig_crowd, use_container_width=True)
+        st.plotly_chart(fig_crowd, width="stretch")
 
     with ai_plan_col:
         st.subheader("💡 GenAI Crowd Control Action Plan")
@@ -512,7 +515,7 @@ else:
                     "Severity": "Severity Rating"
                 },
                 hide_index=True,
-                use_container_width=True
+                width="stretch"
             )
             
             # Interactive action trigger
