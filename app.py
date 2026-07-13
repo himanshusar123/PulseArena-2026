@@ -156,6 +156,32 @@ def get_mock_fan_response(query, language):
         }
         return res.get(language, res["English"])
 
+def calculate_eco_points(journey_mode, journey_distance):
+    co2_factors = {
+        "Walking / Running": 0.25,
+        "Cycling": 0.22,
+        "Metro Train": 0.15,
+        "Shuttle Bus": 0.10,
+        "Rideshare / Car": 0.0
+    }
+    factor = co2_factors.get(journey_mode, 0.0)
+    co2_saved = journey_distance * factor
+    points_earned = int(co2_saved * 10)
+    return points_earned, co2_saved
+
+def parse_incident_report(ai_response):
+    if not ai_response:
+        return "", "Medium"
+    try:
+        parts = ai_response.split('|')
+        summary = parts[0].replace("Summary:", "").strip()
+        severity = parts[1].replace("Severity:", "").strip()
+        if severity not in ["High", "Medium", "Low"]:
+            severity = "Medium"
+        return summary, severity
+    except Exception:
+        return ai_response.strip(), "Medium"
+
 # Initialize session state variables
 if "incidents" not in st.session_state:
     st.session_state.incidents = pd.DataFrame(columns=["Incident ID", "Category", "Zone", "Details", "Summary", "Severity"])
@@ -187,6 +213,45 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("🎯 View Mode")
 view_mode = st.sidebar.radio("Select Interface", ["🏟️ Fan Portal", "📋 Staff Operations Hub"])
 
+st.sidebar.markdown("---")
+st.sidebar.subheader("♿ Accessibility Settings")
+access_mode = st.sidebar.checkbox("High Contrast & Text Zoom Mode", help="Enhances text contrast and enlarges elements for screen readers and visually impaired users.")
+
+if access_mode:
+    st.markdown("""
+    <style>
+        html, body, [class*="css"] {
+            font-size: 18px !important;
+        }
+        .kpi-card {
+            background: #000000 !important;
+            border: 2px solid #FFFFFF !important;
+            color: #FFFFFF !important;
+        }
+        .kpi-title {
+            color: #FFFFFF !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+        }
+        .kpi-value-green, .kpi-value-purple, .kpi-value-gold {
+            background: none !important;
+            -webkit-text-fill-color: initial !important;
+            color: #FFFF00 !important;
+            font-size: 44px !important;
+        }
+        .alert-box {
+            background: #000000 !important;
+            border: 2px solid #FF0000 !important;
+            color: #FF6666 !important;
+        }
+        .ai-box {
+            background: #000000 !important;
+            border: 2px solid #00FFFF !important;
+            color: #FFFFFF !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
 # Main Header
 col_logo, col_header = st.columns([1, 10])
 with col_logo:
@@ -206,12 +271,12 @@ if view_mode == "🏟️ Fan Portal":
     if os.path.exists("stadium_banner.png"):
         st.image("stadium_banner.png", width="stretch")
         
-    st.markdown("## 🏟️ Fan Assistance & Accessibility Hub")
+    st.markdown('## <span role="img" aria-label="stadium">🏟️</span> Fan Assistance & Accessibility Hub', unsafe_allow_html=True)
     
     col_chat, col_info = st.columns([3, 2])
     
     with col_chat:
-        st.subheader("💬 Ask the PulseArena Fan Copilot")
+        st.markdown('### <span role="img" aria-label="speech balloon">💬</span> Ask the PulseArena Fan Copilot', unsafe_allow_html=True)
         st.write("Our AI assistant supports multilingual text. Type your query below.")
         
         fan_lang = st.selectbox("Preferred Language", ["English", "Spanish", "French"])
@@ -228,8 +293,8 @@ if view_mode == "🏟️ Fan Portal":
                         answer = get_mock_fan_response(fan_query, fan_lang)
                     
                     st.markdown(f"""
-                    <div class="ai-box">
-                        <strong>🤖 AI Copilot Response:</strong><br><br>
+                    <div class="ai-box" role="region" aria-label="AI Copilot Response Box">
+                        <strong><span role="img" aria-label="robot">🤖</span> AI Copilot Response:</strong><br><br>
                         {answer}
                     </div>
                     """, unsafe_allow_html=True)
@@ -305,17 +370,10 @@ if view_mode == "🏟️ Fan Portal":
         journey_distance = st.slider("Travel distance (in km)", 1, 50, 5)
         
         if st.button("Log Green Trip & Claim Points"):
-            co2_factors = {
-                "Walking / Running": 0.25,
-                "Cycling": 0.22,
-                "Metro Train": 0.15,
-                "Shuttle Bus": 0.10,
-                "Rideshare / Car": 0.0
-            }
-            points_earned = int(journey_distance * co2_factors[journey_mode] * 10)
+            points_earned, co2_saved = calculate_eco_points(journey_mode, journey_distance)
             if points_earned > 0:
                 st.session_state.eco_points += points_earned
-                st.success(f"🌱 Journey logged! You saved {journey_distance * co2_factors[journey_mode]:.2f}kg of CO2! Earned **{points_earned} Eco-Points**.")
+                st.success(f"🌱 Journey logged! You saved {co2_saved:.2f}kg of CO2! Earned **{points_earned} Eco-Points**.")
             else:
                 st.info("Log a public transit or active journey to earn Eco-Points.")
 
@@ -323,14 +381,14 @@ if view_mode == "🏟️ Fan Portal":
 # STAFF OPERATIONS HUB VIEW
 # =========================================================================
 else:
-    st.markdown("## 📋 Venue Operations & Decision Support")
+    st.markdown('## <span role="img" aria-label="clipboard">📋</span> Venue Operations & Decision Support', unsafe_allow_html=True)
     
     # KPI Row
     kpi_cols = st.columns(4)
     with kpi_cols[0]:
         st.markdown(
             """
-            <div class="kpi-card">
+            <div class="kpi-card" role="region" aria-label="Total Attendance Metric">
                 <div class="kpi-title">Total Attendance</div>
                 <div class="kpi-value-green">74,250</div>
             </div>
@@ -339,7 +397,7 @@ else:
     with kpi_cols[1]:
         st.markdown(
             """
-            <div class="kpi-card">
+            <div class="kpi-card" role="region" aria-label="Active Gate Flow Metric">
                 <div class="kpi-title">Active Gate Flow</div>
                 <div class="kpi-value-purple">620 / min</div>
             </div>
@@ -348,7 +406,7 @@ else:
     with kpi_cols[2]:
         st.markdown(
             f"""
-            <div class="kpi-card">
+            <div class="kpi-card" role="region" aria-label="Logged Incidents Count Metric">
                 <div class="kpi-title">Logged Incidents</div>
                 <div class="kpi-value-gold">{len(st.session_state.incidents)}</div>
             </div>
@@ -357,7 +415,7 @@ else:
     with kpi_cols[3]:
         st.markdown(
             """
-            <div class="kpi-card">
+            <div class="kpi-card" role="region" aria-label="Venue Security Status Metric">
                 <div class="kpi-title">Venue Status</div>
                 <div class="kpi-value-green">SECURE</div>
             </div>
@@ -404,11 +462,11 @@ else:
         st.plotly_chart(fig_crowd, width="stretch")
 
     with ai_plan_col:
-        st.subheader("💡 GenAI Crowd Control Action Plan")
+        st.markdown('### <span role="img" aria-label="light bulb">💡</span> GenAI Crowd Control Action Plan', unsafe_allow_html=True)
         st.markdown(
             """
-            <div class="alert-box">
-                <strong>⚠️ Alert: East Gate B Density Exceeds 85% (Critical Bottleneck)</strong>
+            <div class="alert-box" role="alert" aria-live="assertive">
+                <strong><span role="img" aria-label="warning">⚠️</span> Alert: East Gate B Density Exceeds 85% (Critical Bottleneck)</strong>
             </div>
             """, unsafe_allow_html=True
         )
@@ -434,8 +492,8 @@ else:
                         "*'Gate B is currently congested. Please proceed to Gate C for faster entry (est. wait 4 mins)'.*"
                     )
                 st.markdown(f"""
-                <div class="ai-box">
-                    <strong>🤖 GenAI Action Plan:</strong><br><br>
+                <div class="ai-box" role="region" aria-label="AI Generated Action Plan">
+                    <strong><span role="img" aria-label="robot">🤖</span> GenAI Action Plan:</strong><br><br>
                     {ai_plan}
                 </div>
                 """, unsafe_allow_html=True)
@@ -461,14 +519,7 @@ else:
                         ai_res = call_gemini_api(gemini_key, prompt, system_instruction)
                         
                         # Parse results
-                        try:
-                            parts = ai_res.split('|')
-                            summary = parts[0].replace("Summary:", "").strip()
-                            severity = parts[1].replace("Severity:", "").strip()
-                            # response details
-                        except Exception:
-                            summary = ai_res
-                            severity = "Medium"
+                        summary, severity = parse_incident_report(ai_res)
                     else:
                         # Simulated AI Processing
                         q = details.lower()
